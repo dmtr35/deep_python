@@ -43,12 +43,12 @@ class Recapper:
 
     def get_responses(self):
         for session in self.sessions:
-            print(self.sessions)
-            print(session)
+            # print(self.sessions)
+            # print(session)
             payload = b''
             for packet in self.sessions[session]:
-                print(self.sessions[session])
-                print(packet)
+                # print(self.sessions[session])
+                # print(packet)
                 try:
                     if packet[TCP].dport == 80 or packet[TCP].sport == 80:
                         payload += bytes(packet[TCP].payload)
